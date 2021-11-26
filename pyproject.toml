@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "pb_graphic_tools"
+version = "0.1.0"
+description = ""
+authors = ["vaclav-v"]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+fastapi = "^0.70.0"
+
+[tool.poetry.dev-dependencies]
+flake8 = "^4.0.1"
+mypy = "^0.910"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
