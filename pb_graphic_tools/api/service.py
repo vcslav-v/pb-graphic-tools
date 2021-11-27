@@ -1,3 +1,4 @@
+from logging import log
 import os
 from loguru import logger
 from fastapi import UploadFile
@@ -9,7 +10,10 @@ import aiohttp
 @logger.catch
 async def tinify_img(session: aiohttp.ClientSession, file: UploadFile, width):
     async with session.post('https://api.tinify.com/shrink', data=file.file.read()) as response:
-        tiny_resp = schemas.TinyResponse.parse_raw(await response.read())
+        r = await response.read()
+        logger.debug(r)
+        logger.debug(schemas.TinyResponse.parse_raw(r))
+        tiny_resp = schemas.TinyResponse.parse_raw(r)
         if not tiny_resp.error:
             data = {
                 'resize': {
