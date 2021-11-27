@@ -5,7 +5,7 @@ from pb_graphic_tools import schemas
 import asyncio
 import aiohttp
 
-
+@logger.catch
 async def tinify_img(session: aiohttp.ClientSession, file: UploadFile, width):
     async with session.post('https://api.tinify.com/shrink', data=file.file.read()) as response:
         logger.debug(response.content)
@@ -21,6 +21,7 @@ async def tinify_img(session: aiohttp.ClientSession, file: UploadFile, width):
                 return result.content
 
 
+@logger.catch
 async def tinify_imgs(files: list[UploadFile], width):
     auth = aiohttp.BasicAuth('api', os.environ.get('TINIFY_TOKEN'))
     async with aiohttp.ClientSession(auth=auth) as session:
