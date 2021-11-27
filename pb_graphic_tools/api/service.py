@@ -40,7 +40,7 @@ async def tinify_imgs(files: list[UploadFile], width):
             with zipfile.ZipFile(result_zip_file, 'a') as result_zip:
                 for png_data in png_datas:
                     filename, filedata = png_data
-                    filename = '.'.join(filename.split('.')[:-1].append('png'))
+                    filename = '.'.join(filename.split('.')[:-1] + ['png'])
                     logger.debug(filename)
                     result_zip.writestr(filename, filedata)
-            return result_zip_file.read()
+            return result_zip_file.getvalue()
