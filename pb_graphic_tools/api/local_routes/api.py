@@ -3,6 +3,7 @@ from pb_graphic_tools.api import service
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 import secrets
 import os
+from loguru import logger
 router = APIRouter()
 security = HTTPBasic()
 
@@ -23,10 +24,11 @@ def get_current_username(credentials: HTTPBasicCredentials = Depends(security)):
 
 
 @router.post('/tinify')
+@logger.catch
 async def tinify(
     width: int = None,
     files: list[UploadFile] = File(...),
-    _: str = Depends(get_current_username)
+    # _: str = Depends(get_current_username)
 ):
     """Tinify and resize img."""
     try:
