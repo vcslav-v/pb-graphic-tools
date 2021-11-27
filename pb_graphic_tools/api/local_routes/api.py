@@ -11,7 +11,7 @@ async def tinify(token: str, width: int = None, files: list[UploadFile] = File(.
     # if token != os.environ.get('TOKEN'):
     #     return {'error': 'Wrong token'}
     try:
-        tinified_img = await service.tinify_imgs(files, width)
+        tinified_zip = await service.tinify_imgs(files, width)
     except ValueError as val_err:
         return {'error': val_err.args}
-    return tinified_img
+    return tinified_zip

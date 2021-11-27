@@ -1,10 +1,12 @@
-from logging import log
-import os
-from loguru import logger
-from fastapi import UploadFile
-from pb_graphic_tools import schemas
 import asyncio
+import io
+import os
+import zipfile
+
 import aiohttp
+from fastapi import UploadFile
+from loguru import logger
+from pb_graphic_tools import schemas
 
 
 @logger.catch
@@ -25,7 +27,7 @@ async def tinify_img(session: aiohttp.ClientSession, file: UploadFile, width):
     }
 
     async with session.post(tiny_resp.output.url, json=data) as result:
-        return await result.read()
+        return (file.filename, await result.read())
 
 
 @logger.catch
@@ -36,6 +38,11 @@ async def tinify_imgs(files: list[UploadFile], width):
         for file in files:
             task = asyncio.create_task(tinify_img(session, file, width))
             tasks.append(task)
-        r = await asyncio.gather(*tasks)
-        logger.debug(r)
-        return r
+        png_datas = await asyncio.gather(*tasks)
+        with io.BytesIO() as result_zip_file:
+            with zipfile.ZipFile(result_zip_file, 'a') as result_zip:
+                for png_data in png_datas:
+                    filename, filedata = png_data
+                    filename = '.'.join(filename.split('.')[:-1].append('png'))
+                    result_zip.writestr(filename, filedata)
+            return result_zip_file.read()
