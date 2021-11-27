@@ -7,6 +7,11 @@ authors = ["vaclav-v"]
 [tool.poetry.dependencies]
 python = "^3.9"
 fastapi = "^0.70.0"
+pydantic = "^1.8.2"
+uvicorn = "^0.15.0"
+python-multipart = "^0.0.5"
+aiohttp = "^3.8.1"
+gunicorn = "^20.1.0"
 
 [tool.poetry.dev-dependencies]
 flake8 = "^4.0.1"
