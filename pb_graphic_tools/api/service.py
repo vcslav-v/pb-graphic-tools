@@ -9,6 +9,7 @@ import aiohttp
 @logger.catch
 async def tinify_img(session: aiohttp.ClientSession, file: UploadFile, width):
     async with session.post('https://api.tinify.com/shrink', data=file.file.read()) as response:
+        logger.debug(response.__dict__)
         logger.debug(response)
         logger.debug(response.content)
         logger.debug(response.read())
