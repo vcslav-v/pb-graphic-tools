@@ -8,8 +8,9 @@ import aiohttp
 @logger.catch
 async def tinify_img(session: aiohttp.ClientSession, file: UploadFile, width):
     async with session.post('https://api.tinify.com/shrink', data=file.file.read()) as response:
-        logger.debug(response.content)
-        tiny_resp = schemas.TinyResponse.parse_raw(response.content)
+        resp = await response.read()
+        logger.debug(resp)
+        tiny_resp = schemas.TinyResponse.parse_raw(resp)
         if not tiny_resp.error:
             data = {
                 'resize': {
