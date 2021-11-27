@@ -25,9 +25,7 @@ async def tinify_img(session: aiohttp.ClientSession, file: UploadFile, width):
     }
 
     async with session.post(tiny_resp.output.url, json=data) as result:
-        rr = await result.read()
-        logger.debug(rr)
-        return rr
+        return await result.read()
 
 
 @logger.catch
@@ -38,4 +36,6 @@ async def tinify_imgs(files: list[UploadFile], width):
         for file in files:
             task = asyncio.create_task(tinify_img(session, file, width))
             tasks.append(task)
-        return await asyncio.gather(*tasks)
+        r = await asyncio.gather(*tasks)
+        logger.debug(r)
+        return r
