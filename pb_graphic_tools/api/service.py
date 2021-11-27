@@ -5,12 +5,14 @@ from pb_graphic_tools import schemas
 import asyncio
 import aiohttp
 
+
 @logger.catch
 async def tinify_img(session: aiohttp.ClientSession, file: UploadFile, width):
     async with session.post('https://api.tinify.com/shrink', data=file.file.read()) as response:
-        resp = await response.read()
-        logger.debug(resp)
-        tiny_resp = schemas.TinyResponse.parse_raw(resp)
+        logger.debug(response)
+        logger.debug(response.content)
+        logger.debug(response.read())
+        tiny_resp = schemas.TinyResponse.parse_raw(response.content)
         if not tiny_resp.error:
             data = {
                 'resize': {
