@@ -14,4 +14,10 @@ async def tinify(token: str, width: int = None, files: list[UploadFile] = File(.
         tinified_zip = await service.tinify_imgs(files, width)
     except ValueError as val_err:
         return {'error': val_err.args}
-    return Response(content=tinified_zip, media_type='application/zip')
+    return Response(
+        content=tinified_zip,
+        media_type='application/x-zip-compressed',
+        headers={
+            'Content-Disposition': 'attachment; filename=tinified.zip'
+        }
+    )
