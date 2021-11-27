@@ -19,17 +19,17 @@ async def tinify_img(session: aiohttp.ClientSession, file: UploadFile, width):
     data = {
         'resize': {
             'method': 'scale',
-            'width': width or tiny_resp.output.width
+            'width': width or tiny_resp.output.width  # type: ignore
         }
     }
 
-    async with session.post(tiny_resp.output.url, json=data) as result:
+    async with session.post(tiny_resp.output.url, json=data) as result:  # type: ignore
         return (file.filename, await result.read())
 
 
 @logger.catch
 async def tinify_imgs(files: list[UploadFile], width):
-    auth = aiohttp.BasicAuth('api', os.environ.get('TINIFY_TOKEN'))
+    auth = aiohttp.BasicAuth('api', os.environ.get('TINIFY_TOKEN') or 'token')
     async with aiohttp.ClientSession(auth=auth) as session:
         tasks = []
         for file in files:
