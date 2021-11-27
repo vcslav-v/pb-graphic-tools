@@ -18,7 +18,7 @@ async def tinify_img(session: aiohttp.ClientSession, file: UploadFile, width):
                 }
             }
             async with session.post(tiny_resp.output.url, json=data) as result:
-                return await result.read()
+                return result.content
 
 
 async def tinify_imgs(files: list[UploadFile], width):
