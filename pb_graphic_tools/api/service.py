@@ -12,10 +12,7 @@ from pb_graphic_tools import schemas
 @logger.catch
 async def tinify_img(session: aiohttp.ClientSession, file: UploadFile, width):
     async with session.post('https://api.tinify.com/shrink', data=file.file.read()) as response:
-        r = await response.read()
-        logger.debug(r)
-        logger.debug(schemas.TinyResponse.parse_raw(r))
-        tiny_resp = schemas.TinyResponse.parse_raw(r)
+        tiny_resp = schemas.TinyResponse.parse_raw(await response.read())
         if tiny_resp.error:
             return tiny_resp.error
 
@@ -44,5 +41,6 @@ async def tinify_imgs(files: list[UploadFile], width):
                 for png_data in png_datas:
                     filename, filedata = png_data
                     filename = '.'.join(filename.split('.')[:-1].append('png'))
+                    logger.debug(filename)
                     result_zip.writestr(filename, filedata)
             return result_zip_file.read()
