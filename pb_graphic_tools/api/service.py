@@ -14,15 +14,20 @@ async def tinify_img(session: aiohttp.ClientSession, file: UploadFile, width):
         logger.debug(r)
         logger.debug(schemas.TinyResponse.parse_raw(r))
         tiny_resp = schemas.TinyResponse.parse_raw(r)
-        if not tiny_resp.error:
-            data = {
-                'resize': {
-                    'method': 'scale',
-                    'width': width or tiny_resp.output.width
-                }
-            }
-            async with session.post(tiny_resp.output.url, json=data) as result:
-                return await result.read()
+        if tiny_resp.error:
+            return tiny_resp.error
+
+    data = {
+        'resize': {
+            'method': 'scale',
+            'width': width or tiny_resp.output.width
+        }
+    }
+
+    async with session.post(tiny_resp.output.url, json=data) as result:
+        rr = await result.read()
+        logger.debug(rr)
+        return rr
 
 
 @logger.catch
