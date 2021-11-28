@@ -28,7 +28,7 @@ def get_current_username(credentials: HTTPBasicCredentials = Depends(security)):
 async def tinify(
     width: int = None,
     files: list[UploadFile] = File(...),
-    # _: str = Depends(get_current_username)
+    _: str = Depends(get_current_username)
 ):
     """Tinify and resize img."""
     try:
