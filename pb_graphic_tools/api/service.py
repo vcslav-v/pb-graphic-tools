@@ -2,7 +2,7 @@ import asyncio
 import io
 import os
 import zipfile
-
+from PIL import Image
 import aiohttp
 from fastapi import UploadFile
 from loguru import logger
@@ -44,3 +44,25 @@ async def tinify_imgs(files: list[UploadFile], width):
                     logger.debug(filename)
                     result_zip.writestr(filename, filedata)
             return result_zip_file.getvalue()
+
+
+@logger.catch
+async def make_long_img(imgs: list[UploadFile]):
+    sorted_imgs = sorted(imgs, key=lambda x: x.filename)
+    with Image.open(sorted_imgs[0].file) as first_img:
+        wide, high = first_img.size
+
+    for img_file in sorted_imgs[1:]:
+        with Image.open(img_file.file) as temp_img:
+            high += temp_img.size[1]
+
+    result_img = Image.new('RGB', (wide, high))
+    point_high = 0
+    for img_file in sorted_imgs:
+        with Image.open(img_file.file) as temp_img:
+            result_img.paste(temp_img, (0, point_high))
+            point_high += temp_img.size[1]
+
+    buf = io.BytesIO()
+    result_img.save(buf, format='JPEG')
+    return buf.getvalue()

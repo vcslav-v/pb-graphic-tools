@@ -1,9 +1,12 @@
-from fastapi import APIRouter, File, UploadFile, Response, Depends, HTTPException, status
-from pb_graphic_tools.api import service
-from fastapi.security import HTTPBasic, HTTPBasicCredentials
-import secrets
 import os
+import secrets
+
+from fastapi import (APIRouter, Depends, File, HTTPException, Response,
+                     UploadFile, status)
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from loguru import logger
+from pb_graphic_tools.api import service
+
 router = APIRouter()
 security = HTTPBasic()
 
@@ -40,5 +43,25 @@ async def tinify(
         media_type='application/x-zip-compressed',
         headers={
             'Content-Disposition': 'attachment; filename=tinified.zip'
+        }
+    )
+
+
+@router.post('/long')
+@logger.catch
+async def long(
+    files: list[UploadFile] = File(...),
+    _: str = Depends(get_current_username)
+):
+    """Make long img."""
+    try:
+        long_img_data = await service.make_long_img(files)
+    except ValueError as val_err:
+        return {'error': val_err.args}
+    return Response(
+        content=long_img_data,
+        media_type='image/jpeg',
+        headers={
+            'Content-Disposition': 'attachment; filename=long.jpg'
         }
     )
