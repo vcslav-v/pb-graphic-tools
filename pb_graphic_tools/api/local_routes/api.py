@@ -10,7 +10,7 @@ from pb_graphic_tools.api import service
 router = APIRouter()
 security = HTTPBasic()
 
-username = os.environ.get('API_USERNAME') or 'root'
+username = os.environ.get('API_USERNAME') or 'api'
 password = os.environ.get('API_PASSWORD') or 'pass'
 
 
@@ -63,5 +63,27 @@ async def long(
         media_type='image/jpeg',
         headers={
             'Content-Disposition': 'attachment; filename=long.jpg'
+        }
+    )
+
+
+@router.post('/gif')
+@logger.catch
+async def gif(
+    prefix: str = '',
+    duration: int = 100,
+    files: list[UploadFile] = File(...),
+    _: str = Depends(get_current_username)
+):
+    """Make gif."""
+    try:
+        gif_data = await service.make_gif(prefix, duration, files)
+    except ValueError as val_err:
+        return {'error': val_err.args}
+    return Response(
+        content=gif_data,
+        media_type='image/gif',
+        headers={
+            'Content-Disposition': 'attachment; filename=result.gif'
         }
     )

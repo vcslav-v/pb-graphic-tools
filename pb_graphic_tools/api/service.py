@@ -66,3 +66,21 @@ async def make_long_img(imgs: list[UploadFile]):
     buf = io.BytesIO()
     result_img.save(buf, format='JPEG')
     return buf.getvalue()
+
+
+async def make_gif(prefix: str, duration: int, imgs: list[UploadFile]):
+    sorted_imgs = sorted(imgs, key=lambda x: int(
+        os.path.splitext(x.filename)[0][len(prefix):]
+    ))
+    opened_img = [Image.open(img.file) for img in sorted_imgs]
+    buf = io.BytesIO()
+    opened_img[0].save(
+        buf,
+        format='gif',
+        save_all=True,
+        append_images=opened_img[1:],
+        optimize=True,
+        duration=duration,
+        loop=0
+    )
+    return buf.getvalue()
