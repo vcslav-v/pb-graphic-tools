@@ -1,11 +1,14 @@
 import asyncio
 import io
+import math
 import os
 import zipfile
-from PIL import Image
+
 import aiohttp
 from fastapi import UploadFile
 from loguru import logger
+from PIL import Image
+
 from pb_graphic_tools import schemas
 
 
@@ -47,21 +50,24 @@ async def tinify_imgs(files: list[UploadFile], width):
 
 
 @logger.catch
-async def make_long_img(imgs: list[UploadFile]):
+async def make_long_img(imgs: list[UploadFile], size=None, n_cols=1):
+    n_rows = math.ceil(len(imgs) / n_cols)
     sorted_imgs = sorted(imgs, key=lambda x: x.filename)
-    with Image.open(sorted_imgs[0].file) as first_img:
-        wide, high = first_img.size
+    if not size:
+        with Image.open(sorted_imgs[0].file) as first_img:
+            size = first_img.size
 
-    for img_file in sorted_imgs[1:]:
-        with Image.open(img_file.file) as temp_img:
-            high += temp_img.size[1]
-
-    result_img = Image.new('RGB', (wide, high))
-    point_high = 0
+    result_img = Image.new('RGB', (size[0] * n_cols, size[1] * n_rows))
+    cur_row = 0
+    cur_col = 0
     for img_file in sorted_imgs:
         with Image.open(img_file.file) as temp_img:
-            result_img.paste(temp_img, (0, point_high))
-            point_high += temp_img.size[1]
+            resized_img = temp_img.resize(size)
+            result_img.paste(resized_img, (size[0] * cur_col, size[1] * cur_row))
+            cur_col += 1
+            if cur_col >= n_cols:
+                cur_col = 0
+                cur_row += 1
 
     buf = io.BytesIO()
     result_img.save(buf, format='JPEG')

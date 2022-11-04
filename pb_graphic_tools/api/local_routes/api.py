@@ -50,12 +50,18 @@ async def tinify(
 @router.post('/long')
 @logger.catch
 async def long(
+    wide: int = -1,
+    high: int = -1,
+    n_cols: int = 1,
     files: list[UploadFile] = File(...),
     _: str = Depends(get_current_username)
 ):
     """Make long img."""
+    size = None
+    if wide > 0 and high > 0:
+        size = (wide, high)        
     try:
-        long_img_data = await service.make_long_img(files)
+        long_img_data = await service.make_long_img(files, size, n_cols)
     except ValueError as val_err:
         return {'error': val_err.args}
     return Response(
