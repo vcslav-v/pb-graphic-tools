@@ -93,3 +93,28 @@ async def gif(
             'Content-Disposition': 'attachment; filename=result.gif'
         }
     )
+
+
+@router.post('/logn_tile')
+@logger.catch
+async def logn_tile(
+    raw_schema: str,
+    width: int = 0,
+    border: int = 0,
+    raw_border_color: str = 'FFFFFF',
+    files: list[UploadFile] = File(...),
+    _: str = Depends(get_current_username)
+):
+    schema = [int(row) for row in raw_schema.split('-')]
+    border_color = f'#{raw_border_color}'
+    try:
+        long_img_data = await service.make_long_tile_img(files, schema, width, border, border_color)
+    except ValueError as val_err:
+        return {'error': val_err.args}
+    return Response(
+        content=long_img_data,
+        media_type='image/jpeg',
+        headers={
+            'Content-Disposition': 'attachment; filename=result.jpg'
+        }
+    )

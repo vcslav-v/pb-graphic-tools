@@ -90,3 +90,46 @@ async def make_gif(prefix: str, duration: int, imgs: list[UploadFile]):
         loop=0
     )
     return buf.getvalue()
+
+
+async def make_long_tile_img(
+    imgs: list[UploadFile],
+    schema: list[int],
+    width: int,
+    border: int,
+    border_color: str,
+):
+    sorted_imgs = sorted(imgs, key=lambda x: x.filename)
+    if not width:
+        with Image.open(sorted_imgs[0].file) as first_img:
+            width = first_img.size[0]
+    order_schema: list[list[UploadFile]] = []
+    next_img_num = 0
+    for row in schema:
+        order_schema.append(
+            [sorted_imgs[img_num] for img_num in range(next_img_num, row+next_img_num)]
+        )
+        next_img_num += row
+    result = Image.new('RGB', (width, 0), color=border_color)
+    for img_row in order_schema:
+        local_width = (width - (border * (len(img_row) - 1))) // len(img_row)
+        with Image.open(img_row[0].file) as first_row_img:
+            first_row_img_size = first_row_img.size
+        k = local_width / first_row_img_size[0]
+        local_hight = round((first_row_img_size[1] * k))
+        result_row = Image.new('RGB', (width, local_hight), color=border_color)
+        cur_x = 0
+        for img_file in img_row:
+            with Image.open(img_file.file) as row_img:
+                row_img_r = row_img.resize((local_width, local_hight))
+                result_row.paste(row_img_r, (cur_x, 0))
+                cur_x += local_width + border
+        local_border = 0 if result.size[1] == 0 else border
+        new_result = Image.new('RGB', (width, result.size[1]+result_row.size[1]+local_border), color=border_color)
+        new_result.paste(result, (0, 0))
+        new_result.paste(result_row, (0, result.size[1]+local_border))
+        result = new_result
+
+    buf = io.BytesIO()
+    result.save(buf, format='JPEG')
+    return buf.getvalue()
