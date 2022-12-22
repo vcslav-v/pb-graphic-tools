@@ -126,7 +126,9 @@ async def make_long_tile_img(
         aws_access_key_id=DO_SPACE_KEY,
         aws_secret_access_key=DO_SPACE_SECRET
     )
+    logger.debug('start dwn')
     s3_file_keys = await dwn_s3(prefix, client)
+    logger.debug('end dwn')
     sorted_imgs = sorted(os.listdir(os.path.join('temp', prefix)))
     sorted_imgs = [os.path.join('temp', prefix, sorted_img) for sorted_img in sorted_imgs]
     if not width:
@@ -139,6 +141,7 @@ async def make_long_tile_img(
             [sorted_imgs[img_num] for img_num in range(next_img_num, row+next_img_num)]
         )
         next_img_num += row
+    logger.debug('open result img')
     result = Image.new('RGB', (width, 0), color=border_color)
     for img_row in order_schema:
         local_width = (width - (border * (len(img_row) - 1))) // len(img_row)
@@ -154,11 +157,13 @@ async def make_long_tile_img(
                 result_row.paste(row_img_r, (cur_x, 0))
                 cur_x += local_width + border
         local_border = 0 if result.size[1] == 0 else border
+        logger.debug('open new result img')
         new_result = Image.new('RGB', (width, result.size[1]+result_row.size[1]+local_border), color=border_color)
         new_result.paste(result, (0, 0))
         new_result.paste(result_row, (0, result.size[1]+local_border))
         result = new_result
-
+        logger.debug('next turn')
+    logger.debug('save')
     result_name = 'result.jpg'
     result.save(os.path.join('temp', prefix, result_name), format='JPEG')
     for s3_file_key in s3_file_keys:
