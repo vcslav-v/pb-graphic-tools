@@ -100,17 +100,37 @@ async def gif(
 @logger.catch
 async def logn_tile(
     background_tasks: BackgroundTasks,
+    prefix: str,
     raw_schema: str,
     width: int = 0,
     border: int = 0,
     raw_border_color: str = 'FFFFFF',
-    files: list[UploadFile] = File(...),
     _: str = Depends(get_current_username)
 ):
     schema = [int(row) for row in raw_schema.split('-')]
     border_color = f'#{raw_border_color}'
     try:
-        background_tasks.add_task(service.make_long_tile_img, files, schema, width, border, border_color)
+        background_tasks.add_task(service.make_long_tile_img, prefix, schema, width, border, border_color)
     except ValueError as val_err:
         return {'error': val_err.args}
     return 200
+
+
+@router.post('/check_logn_tile')
+@logger.catch
+async def check_logn_tile(
+    prefix: str,
+    response: Response,
+    _: str = Depends(get_current_username)
+):
+    result = await service.check_long_tile_result(prefix)
+    if result:
+        return Response(
+            content=result,
+            media_type='image/jpeg',
+            headers={
+                'Content-Disposition': 'attachment; filename=result.jpg'
+            }
+        )
+    else:
+        return {'status': 'in work'}

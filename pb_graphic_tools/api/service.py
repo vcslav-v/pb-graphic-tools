@@ -3,7 +3,7 @@ import io
 import math
 import os
 import zipfile
-from datetime import datetime
+import shutil
 
 import aiohttp
 from boto3 import session
@@ -100,18 +100,39 @@ async def make_gif(prefix: str, duration: int, imgs: list[UploadFile]):
     return buf.getvalue()
 
 
+async def dwn_s3(prefix: str, client: session.Session):
+    s3_files = client.list_objects_v2(Bucket=DO_SPACE_BUCKET, Prefix=f'temp/{prefix}/')
+    if not s3_files.get('Contents'):
+        raise ValueError('Wrong prefix')
+    os.mkdir(os.path.join('temp', prefix))
+    s3_file_keys = [s3_file['Key'] for s3_file in s3_files['Contents']]
+    for s3_file_key in s3_file_keys:
+        client.download_file(Bucket=DO_SPACE_BUCKET, Key=s3_file_key, Filename=s3_file_key)
+    return s3_file_keys
+
+
 async def make_long_tile_img(
-    imgs: list[UploadFile],
+    prefix: str,
     schema: list[int],
     width: int,
     border: int,
     border_color: str,
 ):
-    sorted_imgs = sorted(imgs, key=lambda x: x.filename)
+    local_session = session.Session()
+    client = local_session.client(
+        's3',
+        region_name=DO_SPACE_REGION,
+        endpoint_url=DO_SPACE_ENDPOINT,
+        aws_access_key_id=DO_SPACE_KEY,
+        aws_secret_access_key=DO_SPACE_SECRET
+    )
+    s3_file_keys = await dwn_s3(prefix, client)
+    sorted_imgs = sorted(os.listdir(os.path.join('temp', prefix)))
+    sorted_imgs = [os.path.join('temp', prefix, sorted_img) for sorted_img in sorted_imgs]
     if not width:
-        with Image.open(sorted_imgs[0].file) as first_img:
+        with Image.open(sorted_imgs[0]) as first_img:
             width = first_img.size[0]
-    order_schema: list[list[UploadFile]] = []
+    order_schema: list[list[str]] = []
     next_img_num = 0
     for row in schema:
         order_schema.append(
@@ -121,14 +142,14 @@ async def make_long_tile_img(
     result = Image.new('RGB', (width, 0), color=border_color)
     for img_row in order_schema:
         local_width = (width - (border * (len(img_row) - 1))) // len(img_row)
-        with Image.open(img_row[0].file) as first_row_img:
+        with Image.open(img_row[0]) as first_row_img:
             first_row_img_size = first_row_img.size
         k = local_width / first_row_img_size[0]
         local_hight = round((first_row_img_size[1] * k))
         result_row = Image.new('RGB', (width, local_hight), color=border_color)
         cur_x = 0
         for img_file in img_row:
-            with Image.open(img_file.file) as row_img:
+            with Image.open(img_file) as row_img:
                 row_img_r = row_img.resize((local_width, local_hight))
                 result_row.paste(row_img_r, (cur_x, 0))
                 cur_x += local_width + border
@@ -138,15 +159,18 @@ async def make_long_tile_img(
         new_result.paste(result_row, (0, result.size[1]+local_border))
         result = new_result
 
-    file_name = f'long-tile-{int(datetime.utcnow().timestamp())}'
-    result.save(file_name, format='JPEG')
-    file_name += '.jpg'
-    local_session = session.Session()
-    client = local_session.client(
-            's3',
-            region_name=DO_SPACE_REGION,
-            endpoint_url=DO_SPACE_ENDPOINT,
-            aws_access_key_id=DO_SPACE_KEY,
-            aws_secret_access_key=DO_SPACE_SECRET
-        )
-    client.upload_file(file_name, DO_SPACE_BUCKET, file_name)
+    result_name = 'result.jpg'
+    result.save(os.path.join('temp', prefix, result_name), format='JPEG')
+    for s3_file_key in s3_file_keys:
+        client.delete_object(Bucket=DO_SPACE_BUCKET, Key=s3_file_key)
+    client.delete_object(Bucket=DO_SPACE_BUCKET, Key=f'temp/{prefix}')
+
+
+async def check_long_tile_result(prefix: str):
+    path = os.path.join('temp', prefix, 'result.jpg')
+    if not os.path.exists(path):
+        return
+    with open(path, 'rb') as result_file:
+        value = result_file.read()
+    shutil.rmtree(os.path.join('temp', prefix))
+    return value
