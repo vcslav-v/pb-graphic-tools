@@ -166,16 +166,11 @@ async def make_long_tile_img(
     logger.debug('save')
     result_name = 'result.jpg'
     result.save(os.path.join('temp', prefix, result_name), format='JPEG')
+    client.upload_file(
+        os.path.join('temp', prefix, result_name),
+        DO_SPACE_BUCKET,
+        f'temp/{prefix}/result.jpg'
+    )
     for s3_file_key in s3_file_keys:
         client.delete_object(Bucket=DO_SPACE_BUCKET, Key=s3_file_key)
-    client.delete_object(Bucket=DO_SPACE_BUCKET, Key=f'temp/{prefix}')
-
-
-async def check_long_tile_result(prefix: str):
-    path = os.path.join('temp', prefix, 'result.jpg')
-    if not os.path.exists(path):
-        return
-    with open(path, 'rb') as result_file:
-        value = result_file.read()
     shutil.rmtree(os.path.join('temp', prefix))
-    return value

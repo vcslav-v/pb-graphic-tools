@@ -114,23 +114,3 @@ async def logn_tile(
     except ValueError as val_err:
         return {'error': val_err.args}
     return 200
-
-
-@router.post('/check_logn_tile')
-@logger.catch
-async def check_logn_tile(
-    prefix: str,
-    response: Response,
-    _: str = Depends(get_current_username)
-):
-    result = await service.check_long_tile_result(prefix)
-    if result:
-        return Response(
-            content=result,
-            media_type='image/jpeg',
-            headers={
-                'Content-Disposition': 'attachment; filename=result.jpg'
-            }
-        )
-    else:
-        return {'status': 'in work'}
