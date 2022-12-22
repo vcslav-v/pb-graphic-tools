@@ -1,10 +1,11 @@
 import os
 import secrets
 
-from fastapi import (APIRouter, Depends, File, HTTPException, Response,
-                     UploadFile, status)
+from fastapi import (APIRouter, BackgroundTasks, Depends, File, HTTPException,
+                     Response, UploadFile, status)
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from loguru import logger
+
 from pb_graphic_tools.api import service
 
 router = APIRouter()
@@ -98,6 +99,7 @@ async def gif(
 @router.post('/logn_tile')
 @logger.catch
 async def logn_tile(
+    background_tasks: BackgroundTasks,
     raw_schema: str,
     width: int = 0,
     border: int = 0,
@@ -108,13 +110,7 @@ async def logn_tile(
     schema = [int(row) for row in raw_schema.split('-')]
     border_color = f'#{raw_border_color}'
     try:
-        long_img_data = await service.make_long_tile_img(files, schema, width, border, border_color)
+        background_tasks.add_task(service.make_long_tile_img, files, schema, width, border, border_color)
     except ValueError as val_err:
         return {'error': val_err.args}
-    return Response(
-        content=long_img_data,
-        media_type='image/jpeg',
-        headers={
-            'Content-Disposition': 'attachment; filename=result.jpg'
-        }
-    )
+    return 200

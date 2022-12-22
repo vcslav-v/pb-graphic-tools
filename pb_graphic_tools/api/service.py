@@ -8,8 +8,15 @@ import aiohttp
 from fastapi import UploadFile
 from loguru import logger
 from PIL import Image
-
+from boto3 import session
 from pb_graphic_tools import schemas
+from datetime import datetime
+
+DO_SPACE_REGION = os.environ.get('DO_SPACE_REGION', '')
+DO_SPACE_ENDPOINT = os.environ.get('DO_SPACE_ENDPOINT', '')
+DO_SPACE_KEY = os.environ.get('DO_SPACE_KEY', '')
+DO_SPACE_SECRET = os.environ.get('DO_SPACE_SECRET', '')
+DO_SPACE_BUCKET = os.environ.get('DO_SPACE_BUCKET', '')
 
 
 @logger.catch
@@ -130,6 +137,15 @@ async def make_long_tile_img(
         new_result.paste(result_row, (0, result.size[1]+local_border))
         result = new_result
 
-    buf = io.BytesIO()
-    result.save(buf, format='JPEG')
-    return buf.getvalue()
+    file_name = f'.long-tile-{int(datetime.utcnow().timestamp())}'
+    result.save(file_name, format='JPEG')
+    file_name += '.jpg'
+    local_session = session.Session()
+    client = local_session.client(
+            's3',
+            region_name=DO_SPACE_REGION,
+            endpoint_url=DO_SPACE_ENDPOINT,
+            aws_access_key_id=DO_SPACE_KEY,
+            aws_secret_access_key=DO_SPACE_SECRET
+        )
+    client.upload_file(file_name, DO_SPACE_BUCKET, file_name)
