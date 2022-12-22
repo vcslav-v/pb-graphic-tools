@@ -3,14 +3,15 @@ import io
 import math
 import os
 import zipfile
+from datetime import datetime
 
 import aiohttp
+from boto3 import session
 from fastapi import UploadFile
 from loguru import logger
 from PIL import Image
-from boto3 import session
+
 from pb_graphic_tools import schemas
-from datetime import datetime
 
 DO_SPACE_REGION = os.environ.get('DO_SPACE_REGION', '')
 DO_SPACE_ENDPOINT = os.environ.get('DO_SPACE_ENDPOINT', '')
@@ -137,7 +138,7 @@ async def make_long_tile_img(
         new_result.paste(result_row, (0, result.size[1]+local_border))
         result = new_result
 
-    file_name = f'.long-tile-{int(datetime.utcnow().timestamp())}'
+    file_name = f'long-tile-{int(datetime.utcnow().timestamp())}'
     result.save(file_name, format='JPEG')
     file_name += '.jpg'
     local_session = session.Session()
