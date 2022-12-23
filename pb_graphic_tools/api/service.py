@@ -75,11 +75,12 @@ async def make_long_img(prefix: str, num_imgs: int, size=None, n_cols=1):
     if not size:
         with Image.open(sorted_imgs[0]) as first_img:
             size = first_img.size
-
+    logger.debug('open result')
     result_img = Image.new('RGB', (size[0] * n_cols, size[1] * n_rows))
     cur_row = 0
     cur_col = 0
     for img_file in sorted_imgs:
+        logger.debug('new turn')
         with Image.open(img_file) as temp_img:
             resized_img = temp_img.resize(size)
             result_img.paste(resized_img, (size[0] * cur_col, size[1] * cur_row))
@@ -89,6 +90,7 @@ async def make_long_img(prefix: str, num_imgs: int, size=None, n_cols=1):
                 cur_row += 1
 
     result_name = 'result.jpg'
+    logger.debug('save result')
     result_img.save(os.path.join('temp', prefix, result_name), format='JPEG')
     client.upload_file(
         os.path.join('temp', prefix, result_name),
@@ -98,6 +100,7 @@ async def make_long_img(prefix: str, num_imgs: int, size=None, n_cols=1):
     for s3_file_key in s3_file_keys:
         client.delete_object(Bucket=DO_SPACE_BUCKET, Key=s3_file_key)
     shutil.rmtree(os.path.join('temp', prefix))
+    logger.debug('end')
 
 
 async def make_gif(prefix: str, duration: int, imgs: list[UploadFile]):
