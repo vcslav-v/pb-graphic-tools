@@ -174,3 +174,24 @@ async def make_long_tile_img(
     for s3_file_key in s3_file_keys:
         client.delete_object(Bucket=DO_SPACE_BUCKET, Key=s3_file_key)
     shutil.rmtree(os.path.join('temp', prefix))
+
+
+def flush_temp_space():
+    local_session = session.Session()
+    client = local_session.client(
+        's3',
+        region_name=DO_SPACE_REGION,
+        endpoint_url=DO_SPACE_ENDPOINT,
+        aws_access_key_id=DO_SPACE_KEY,
+        aws_secret_access_key=DO_SPACE_SECRET
+    )
+    s3_files = client.list_objects_v2(Bucket=DO_SPACE_BUCKET, Prefix=f'temp/')
+    if not s3_files.get('Contents'):
+        return
+    s3_file_keys = [s3_file['Key'] for s3_file in s3_files['Contents']]
+    for s3_file_key in s3_file_keys:
+        client.delete_object(Bucket=DO_SPACE_BUCKET, Key=s3_file_key)
+    temp_tree = os.listdir('temp')
+    for temp_file in temp_tree:
+        if os.path.isdir(os.path.join('temp', temp_file)):
+            shutil.rmtree(os.path.join('temp', temp_file))
