@@ -51,10 +51,12 @@ async def tinify(
 @router.post('/long')
 @logger.catch
 async def long(
+    background_tasks: BackgroundTasks,
+    prefix: str,
+    num_imgs: int,
     wide: int = -1,
     high: int = -1,
     n_cols: int = 1,
-    files: list[UploadFile] = File(...),
     _: str = Depends(get_current_username)
 ):
     """Make long img."""
@@ -62,16 +64,10 @@ async def long(
     if wide > 0 and high > 0:
         size = (wide, high)        
     try:
-        long_img_data = await service.make_long_img(files, size, n_cols)
+        background_tasks.add_task(service.make_long_img, prefix, num_imgs, size, n_cols)
     except ValueError as val_err:
         return {'error': val_err.args}
-    return Response(
-        content=long_img_data,
-        media_type='image/jpeg',
-        headers={
-            'Content-Disposition': 'attachment; filename=long.jpg'
-        }
-    )
+    return 200
 
 
 @router.post('/gif')

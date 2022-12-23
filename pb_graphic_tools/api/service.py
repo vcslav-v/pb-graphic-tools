@@ -58,18 +58,29 @@ async def tinify_imgs(files: list[UploadFile], width):
 
 
 @logger.catch
-async def make_long_img(imgs: list[UploadFile], size=None, n_cols=1):
-    n_rows = math.ceil(len(imgs) / n_cols)
-    sorted_imgs = sorted(imgs, key=lambda x: x.filename)
+async def make_long_img(prefix: str, num_imgs: int, size=None, n_cols=1):
+    local_session = session.Session()
+    client = local_session.client(
+        's3',
+        region_name=DO_SPACE_REGION,
+        endpoint_url=DO_SPACE_ENDPOINT,
+        aws_access_key_id=DO_SPACE_KEY,
+        aws_secret_access_key=DO_SPACE_SECRET
+    )
+    logger.debug('start dwn')
+    s3_file_keys = await dwn_s3(prefix, client)
+    n_rows = math.ceil(num_imgs / n_cols)
+    sorted_imgs = sorted(os.listdir(os.path.join('temp', prefix)))
+    sorted_imgs = [os.path.join('temp', prefix, sorted_img) for sorted_img in sorted_imgs]
     if not size:
-        with Image.open(sorted_imgs[0].file) as first_img:
+        with Image.open(sorted_imgs[0]) as first_img:
             size = first_img.size
 
     result_img = Image.new('RGB', (size[0] * n_cols, size[1] * n_rows))
     cur_row = 0
     cur_col = 0
     for img_file in sorted_imgs:
-        with Image.open(img_file.file) as temp_img:
+        with Image.open(img_file) as temp_img:
             resized_img = temp_img.resize(size)
             result_img.paste(resized_img, (size[0] * cur_col, size[1] * cur_row))
             cur_col += 1
@@ -77,9 +88,16 @@ async def make_long_img(imgs: list[UploadFile], size=None, n_cols=1):
                 cur_col = 0
                 cur_row += 1
 
-    buf = io.BytesIO()
-    result_img.save(buf, format='JPEG')
-    return buf.getvalue()
+    result_name = 'result.jpg'
+    result_img.save(os.path.join('temp', prefix, result_name), format='JPEG')
+    client.upload_file(
+        os.path.join('temp', prefix, result_name),
+        DO_SPACE_BUCKET,
+        f'temp/{prefix}/result.jpg'
+    )
+    for s3_file_key in s3_file_keys:
+        client.delete_object(Bucket=DO_SPACE_BUCKET, Key=s3_file_key)
+    shutil.rmtree(os.path.join('temp', prefix))
 
 
 async def make_gif(prefix: str, duration: int, imgs: list[UploadFile]):
