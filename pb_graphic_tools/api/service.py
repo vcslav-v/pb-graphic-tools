@@ -19,13 +19,16 @@ DO_SPACE_KEY = os.environ.get('DO_SPACE_KEY', '')
 DO_SPACE_SECRET = os.environ.get('DO_SPACE_SECRET', '')
 DO_SPACE_BUCKET = os.environ.get('DO_SPACE_BUCKET', '')
 
+TINY_TOKEN = os.environ.get('TINIFY_TOKEN', '')
+
 
 @logger.catch
-async def tinify_img(session: aiohttp.ClientSession, file: UploadFile, width):
-    async with session.post('https://api.tinify.com/shrink', data=file.file.read()) as response:
-        tiny_resp = schemas.TinyResponse.parse_raw(await response.read())
-        if tiny_resp.error:
-            return tiny_resp.error
+async def tinify_img(session: aiohttp.ClientSession, path_file, width):
+    with open(path_file, 'rb') as file:
+        async with session.post('https://api.tinify.com/shrink', data=file.read()) as response:
+            tiny_resp = schemas.TinyResponse.parse_raw(await response.read())
+            if tiny_resp.error:
+                return tiny_resp.error
 
     data = {
         'resize': {
@@ -35,26 +38,44 @@ async def tinify_img(session: aiohttp.ClientSession, file: UploadFile, width):
     }
 
     async with session.post(tiny_resp.output.url, json=data) as result:  # type: ignore
-        return (file.filename, await result.read())
+        return (file.name, await result.read())
 
 
 @logger.catch
-async def tinify_imgs(files: list[UploadFile], width):
-    auth = aiohttp.BasicAuth('api', os.environ.get('TINIFY_TOKEN') or 'token')
-    async with aiohttp.ClientSession(auth=auth) as session:
+async def tinify_imgs(prefix, width):
+    auth = aiohttp.BasicAuth('api', TINY_TOKEN)
+    local_session = session.Session()
+    client = local_session.client(
+        's3',
+        region_name=DO_SPACE_REGION,
+        endpoint_url=DO_SPACE_ENDPOINT,
+        aws_access_key_id=DO_SPACE_KEY,
+        aws_secret_access_key=DO_SPACE_SECRET
+    )
+    logger.debug('start dwn')
+    s3_file_keys = await dwn_s3(prefix, client)
+    async with aiohttp.ClientSession(auth=auth) as session_ai:
         tasks = []
-        for file in files:
-            task = asyncio.create_task(tinify_img(session, file, width))
+        for file_path in s3_file_keys:
+            task = asyncio.create_task(tinify_img(session_ai, file_path, width))
             tasks.append(task)
         png_datas = await asyncio.gather(*tasks)
-        with io.BytesIO() as result_zip_file:
-            with zipfile.ZipFile(result_zip_file, 'a') as result_zip:
-                for png_data in png_datas:
-                    filename, filedata = png_data
-                    filename = '.'.join(filename.split('.')[:-1] + ['png'])
-                    logger.debug(filename)
-                    result_zip.writestr(filename, filedata)
-            return result_zip_file.getvalue()
+        result_name = 'result.zip'
+        with zipfile.ZipFile(os.path.join('temp', prefix, result_name), 'a') as result_zip:
+            for png_data in png_datas:
+                filename, filedata = png_data
+                filename = '.'.join(filename.split('/')[-1].split('.')[:-1] + ['png'])
+                logger.debug(filename)
+                result_zip.writestr(filename, filedata)
+        client.upload_file(
+            os.path.join('temp', prefix, result_name),
+            DO_SPACE_BUCKET,
+            f'temp/{prefix}/{result_name}'
+        )
+        for s3_file_key in s3_file_keys:
+            client.delete_object(Bucket=DO_SPACE_BUCKET, Key=s3_file_key)
+        shutil.rmtree(os.path.join('temp', prefix))
+        logger.debug('end')
 
 
 @logger.catch

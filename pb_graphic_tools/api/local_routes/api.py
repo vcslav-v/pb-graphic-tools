@@ -30,22 +30,17 @@ def get_current_username(credentials: HTTPBasicCredentials = Depends(security)):
 @router.post('/tinify')
 @logger.catch
 async def tinify(
+    background_tasks: BackgroundTasks,
+    prefix: str,
     width: int = None,
-    files: list[UploadFile] = File(...),
     _: str = Depends(get_current_username)
 ):
     """Tinify and resize img."""
     try:
-        tinified_zip = await service.tinify_imgs(files, width)
+        background_tasks.add_task(service.tinify_imgs, prefix, width)
     except ValueError as val_err:
         return {'error': val_err.args}
-    return Response(
-        content=tinified_zip,
-        media_type='application/x-zip-compressed',
-        headers={
-            'Content-Disposition': 'attachment; filename=tinified.zip'
-        }
-    )
+    return 200
 
 
 @router.post('/long')
@@ -62,7 +57,7 @@ async def long(
     """Make long img."""
     size = None
     if wide > 0 and high > 0:
-        size = (wide, high)        
+        size = (wide, high)
     try:
         background_tasks.add_task(service.make_long_img, prefix, num_imgs, size, n_cols)
     except ValueError as val_err:
