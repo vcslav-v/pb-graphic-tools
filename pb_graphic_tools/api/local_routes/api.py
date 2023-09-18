@@ -32,12 +32,13 @@ def get_current_username(credentials: HTTPBasicCredentials = Depends(security)):
 async def tinify(
     background_tasks: BackgroundTasks,
     prefix: str,
+    is_tinify: bool = False,
     width: int = None,
     _: str = Depends(get_current_username)
 ):
     """Tinify and resize img."""
     try:
-        background_tasks.add_task(service.tinify_imgs, prefix, width)
+        background_tasks.add_task(service.tinify_imgs, prefix, width, is_tinify)
     except ValueError as val_err:
         return {'error': val_err.args}
     return 200

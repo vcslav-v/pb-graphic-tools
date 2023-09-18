@@ -42,8 +42,7 @@ async def tinify_img(session: aiohttp.ClientSession, path_file, width):
 
 
 @logger.catch
-async def tinify_imgs(prefix, width):
-    auth = aiohttp.BasicAuth('api', TINY_TOKEN)
+async def tinify_imgs(prefix, width, is_tinify):
     local_session = session.Session()
     client = local_session.client(
         's3',
@@ -54,28 +53,35 @@ async def tinify_imgs(prefix, width):
     )
     logger.debug('start dwn')
     s3_file_keys = await dwn_s3(prefix, client)
-    async with aiohttp.ClientSession(auth=auth) as session_ai:
-        tasks = []
+    if is_tinify:
+        auth = aiohttp.BasicAuth('api', TINY_TOKEN)
+        async with aiohttp.ClientSession(auth=auth) as session_ai:
+            tasks = []
+            for file_path in s3_file_keys:
+                task = asyncio.create_task(tinify_img(session_ai, file_path, width))
+                tasks.append(task)
+            png_datas = await asyncio.gather(*tasks)
+    else:
+        png_datas = []
         for file_path in s3_file_keys:
-            task = asyncio.create_task(tinify_img(session_ai, file_path, width))
-            tasks.append(task)
-        png_datas = await asyncio.gather(*tasks)
-        result_name = 'result.zip'
-        with zipfile.ZipFile(os.path.join('temp', prefix, result_name), 'a') as result_zip:
-            for png_data in png_datas:
-                filename, filedata = png_data
-                filename = '.'.join(filename.split('/')[-1].split('.')[:-1] + ['png'])
-                logger.debug(filename)
-                result_zip.writestr(filename, filedata)
-        client.upload_file(
-            os.path.join('temp', prefix, result_name),
-            DO_SPACE_BUCKET,
-            f'temp/{prefix}/{result_name}'
-        )
-        for s3_file_key in s3_file_keys:
-            client.delete_object(Bucket=DO_SPACE_BUCKET, Key=s3_file_key)
-        shutil.rmtree(os.path.join('temp', prefix))
-        logger.debug('end')
+            png_datas.append(resize_img(file_path, width))
+
+    result_name = 'result.zip'
+    with zipfile.ZipFile(os.path.join('temp', prefix, result_name), 'a') as result_zip:
+        for png_data in png_datas:
+            filename, filedata = png_data
+            filename = '.'.join(filename.split('/')[-1].split('.')[:-1] + ['png'])
+            logger.debug(filename)
+            result_zip.writestr(filename, filedata)
+    client.upload_file(
+        os.path.join('temp', prefix, result_name),
+        DO_SPACE_BUCKET,
+        f'temp/{prefix}/{result_name}'
+    )
+    for s3_file_key in s3_file_keys:
+        client.delete_object(Bucket=DO_SPACE_BUCKET, Key=s3_file_key)
+    shutil.rmtree(os.path.join('temp', prefix))
+    logger.debug('end')
 
 
 @logger.catch
@@ -151,6 +157,15 @@ async def dwn_s3(prefix: str, client: session.Session):
     for s3_file_key in s3_file_keys:
         client.download_file(Bucket=DO_SPACE_BUCKET, Key=s3_file_key, Filename=s3_file_key)
     return s3_file_keys
+
+
+def resize_img(img_path, width) -> tuple[str, bytes]:
+    with Image.open(img_path) as img:
+        img_r = img.resize((width, round(img.size[1] * width / img.size[0])))
+        buf = io.BytesIO()
+        img_r.save(buf, format='JPEG')
+        filename = img_path.split('/')[-1]
+        return (filename, buf.getvalue())
 
 
 async def make_long_tile_img(
