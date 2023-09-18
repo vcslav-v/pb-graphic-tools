@@ -163,7 +163,7 @@ def resize_img(img_path, width) -> tuple[str, bytes]:
     with Image.open(img_path) as img:
         img_r = img.resize((width, round(img.size[1] * width / img.size[0])))
         buf = io.BytesIO()
-        img_r.save(buf, format='JPEG')
+        img_r.save(buf, format='PNG')
         filename = img_path.split('/')[-1]
         return (filename, buf.getvalue())
 
