@@ -142,7 +142,7 @@ async def cut_files(prefix: str, left: int, top: int, right: int, bottom: int):
     )
     logger.debug('start dwn')
     s3_file_keys = await dwn_s3(prefix, client)
-    imgs_path = [os.path.join('temp', prefix, sorted_img) for sorted_img in os.listdir(os.path.join('temp', prefix)) if sorted_img.endswith('.jpg') or sorted_img.endswith('.png')]
+    imgs_path = [os.path.join('temp', prefix, sorted_img) for sorted_img in os.listdir(os.path.join('temp', prefix)) if sorted_img.endswith('.jpg') or sorted_img.endswith('.png') or sorted_img.endswith('.jpeg')]
     cropped_images = []
 
     for image_path in imgs_path:
