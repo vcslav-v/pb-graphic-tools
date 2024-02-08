@@ -106,3 +106,21 @@ async def logn_tile(
     except ValueError as val_err:
         return {'error': val_err.args}
     return 200
+
+
+@router.get('/cut_pics')
+@logger.catch
+async def cut_pics(
+    background_tasks: BackgroundTasks,
+    left: int,
+    top: int,
+    right: int,
+    bottom: int,
+    prefix: str,
+    _: str = Depends(get_current_username)
+):
+    try:
+        background_tasks.add_task(service.cut_files, prefix, left, top, right, bottom)
+    except ValueError as val_err:
+        return {'error': val_err.args}
+    return 200

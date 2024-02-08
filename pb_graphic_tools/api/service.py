@@ -130,6 +130,50 @@ async def make_long_img(prefix: str, num_imgs: int, size=None, n_cols=1):
     logger.debug('end')
 
 
+@logger.catch
+async def cut_files(prefix: str, left: int, top: int, right: int, bottom: int):
+    local_session = session.Session()
+    client = local_session.client(
+        's3',
+        region_name=DO_SPACE_REGION,
+        endpoint_url=DO_SPACE_ENDPOINT,
+        aws_access_key_id=DO_SPACE_KEY,
+        aws_secret_access_key=DO_SPACE_SECRET
+    )
+    logger.debug('start dwn')
+    s3_file_keys = await dwn_s3(prefix, client)
+    imgs_path = [os.path.join('temp', prefix, sorted_img) for sorted_img in os.listdir(os.path.join('temp', prefix)) if sorted_img.endswith('.jpg') or sorted_img.endswith('.png')]
+    cropped_images = []
+
+    for image_path in imgs_path:
+        with Image.open(image_path) as img:
+            if img.width > (left + right) and img.height > (top + bottom):
+                cropped_img = img.crop((left, top, img.width - right, img.height - bottom))
+                cropped_img.save(image_path)
+                cropped_images.append(image_path)
+
+    result_path = os.path.join('temp', prefix, 'result.zip')
+    with zipfile.ZipFile(result_path, 'w') as zipf:
+        if cropped_images:
+            for image_path in cropped_images:
+                zipf.write(image_path, arcname=os.path.basename(image_path))
+        else:
+            with open("message.txt", "w") as f:
+                f.write("No suitable images found.")
+            zipf.write("message.txt")
+
+    client.upload_file(
+        result_path,
+        DO_SPACE_BUCKET,
+        f'temp/{prefix}/result.zip'
+    )
+    for s3_file_key in s3_file_keys:
+        client.delete_object(Bucket=DO_SPACE_BUCKET, Key=s3_file_key)
+    shutil.rmtree(os.path.join('temp', prefix))
+    logger.debug('end')
+
+
+
 async def make_gif(prefix: str, duration: int, imgs: list[UploadFile]):
     sorted_imgs = sorted(imgs, key=lambda x: int(
         os.path.splitext(x.filename)[0][len(prefix):]
