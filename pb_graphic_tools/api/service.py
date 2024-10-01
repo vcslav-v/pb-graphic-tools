@@ -265,7 +265,7 @@ async def make_long_tile_img(
                 row_img_r = row_img.resize((local_width, local_hight))
                 result_row.paste(row_img_r, (cur_x, 0))
                 cur_x += local_width + border
-        local_border = 0 if first_flag == 0 else border
+        local_border = 0 if first_flag else border
         logger.debug('open new result img')
         new_result = Image.new('RGB', (width, result.size[1]+result_row.size[1]+local_border), color=border_color)
         new_result.paste(result, (0, 0))
