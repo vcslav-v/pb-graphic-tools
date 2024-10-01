@@ -240,6 +240,7 @@ async def make_long_tile_img(
     for row in schema:
         if row == 0:
             order_schema.append([])
+            continue
         order_schema.append(
             [sorted_imgs[img_num] for img_num in range(next_img_num, row+next_img_num)]
         )
