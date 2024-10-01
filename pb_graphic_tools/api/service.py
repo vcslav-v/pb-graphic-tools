@@ -251,6 +251,7 @@ async def make_long_tile_img(
             new_result = Image.new('RGB', (width, result.size[1]+border), color=border_color)
             new_result.paste(result, (0, 0))
             result = new_result
+            continue
         local_width = (width - (border * (len(img_row) - 1))) // len(img_row)
         with Image.open(img_row[0]) as first_row_img:
             first_row_img_size = first_row_img.size
