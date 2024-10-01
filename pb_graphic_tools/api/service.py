@@ -247,6 +247,7 @@ async def make_long_tile_img(
         next_img_num += row
     logger.debug('open result img')
     result = Image.new('RGB', (width, 0), color=border_color)
+    first_flag = True
     for img_row in order_schema:
         if not img_row:
             new_result = Image.new('RGB', (width, result.size[1]+border), color=border_color)
