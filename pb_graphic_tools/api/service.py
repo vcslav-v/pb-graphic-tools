@@ -238,6 +238,8 @@ async def make_long_tile_img(
     order_schema: list[list[str]] = []
     next_img_num = 0
     for row in schema:
+        if row == 0:
+            order_schema.append([])
         order_schema.append(
             [sorted_imgs[img_num] for img_num in range(next_img_num, row+next_img_num)]
         )
@@ -245,6 +247,10 @@ async def make_long_tile_img(
     logger.debug('open result img')
     result = Image.new('RGB', (width, 0), color=border_color)
     for img_row in order_schema:
+        if not img_row:
+            new_result = Image.new('RGB', (width, result.size[1]+border), color=border_color)
+            new_result.paste(result, (0, 0))
+            result = new_result
         local_width = (width - (border * (len(img_row) - 1))) // len(img_row)
         with Image.open(img_row[0]) as first_row_img:
             first_row_img_size = first_row_img.size
