@@ -99,6 +99,7 @@ async def logn_tile(
     raw_border_color: str = 'FFFFFF',
     _: str = Depends(get_current_username)
 ):
+    logger.info(f'prefix: {prefix}, raw_schema: {raw_schema}, width: {width}, border: {border}, raw_border_color: {raw_border_color}')
     schema = [int(row) for row in raw_schema.split('-')]
     border_color = f'#{raw_border_color}'
     try:
